@@ -1,0 +1,228 @@
+  <html>
+  <head>
+  <style>
+  * {
+    margin: 0;
+    padding: 0;
+  }
+
+  canvas {
+    background: black;
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  .score {
+    color: white;
+    font-family: Arial;
+    font-size: 32px;
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  .line {
+    border-left: 2px dashed white;
+    height: 100%;
+    position: absolute;
+    top: 0;
+    left: 50%;
+  }
+  </style>
+  </head>
+  <body>
+  <canvas id="canvas"></canvas>
+  <div class="score">0 : 0</div>
+  <div class="line"></div>
+  <script>
+  // Get the canvas element and its context
+  var canvas = document.getElementById("canvas");
+  var ctx = canvas.getContext("2d");
+
+  // Set the canvas width and height to the window size
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+
+  // Define some constants
+  var BALL_RADIUS = 10; // The radius of the ball
+  var PADDLE_WIDTH = 10; // The width of the paddle
+  var PADDLE_HEIGHT = 100; // The height of the paddle
+  var PADDLE_SPEED = 10; // The speed of the paddle
+  var BALL_SPEED = 5; // The initial speed of the ball
+  var SCORE_LIMIT = 10; // The score limit to win the game
+  var AI_DIFFICULTY = 0.8; // The difficulty of the AI, from 0 (easy) to 1 (hard)
+
+  // Define some variables
+  var ballX = canvas.width / 2; // The x position of the ball
+  var ballY = canvas.height / 2; // The y position of the ball
+  var ballVX = BALL_SPEED; // The x velocity of the ball
+  var ballVY = BALL_SPEED; // The y velocity of the ball
+  var paddle1Y = canvas.height / 2 - PADDLE_HEIGHT / 2; // The y position of the left paddle
+  var paddle2Y = canvas.height / 2 - PADDLE_HEIGHT / 2; // The y position of the right paddle
+  var score1 = 0; // The score of the left player
+  var score2 = 0; // The score of the right player
+  var gameOver = false; // A flag to indicate if the game is over
+
+  // Define some functions
+  function drawBall() {
+    // Draw the ball as a white circle
+    ctx.fillStyle = "white";
+    ctx.beginPath();
+    ctx.arc(ballX, ballY, BALL_RADIUS, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  function drawPaddles() {
+    // Draw the paddles as white rectangles
+    ctx.fillStyle = "white";
+    ctx.fillRect(0, paddle1Y, PADDLE_WIDTH, PADDLE_HEIGHT);
+    ctx.fillRect(canvas.width - PADDLE_WIDTH, paddle2Y, PADDLE_WIDTH, PADDLE_HEIGHT);
+  }
+
+  function updateBall() {
+    // Update the ball position and velocity
+    ballX += ballVX;
+    ballY += ballVY;
+
+    // Check for wall collisions
+    if (ballY - BALL_RADIUS < 0 || ballY + BALL_RADIUS > canvas.height) {
+      // Reverse the y velocity
+      ballVY = -ballVY;
+    }
+
+    // Check for paddle collisions
+    if (ballX - BALL_RADIUS < PADDLE_WIDTH) {
+      // The ball is near the left paddle
+      if (ballY > paddle1Y && ballY < paddle1Y + PADDLE_HEIGHT) {
+        // The ball hits the left paddle
+        // Reverse the x velocity and increase the speed
+        ballVX = -ballVX * 1.1;
+        ballVY = ballVY * 1.1;
+      } else {
+        // The ball misses the left paddle
+        // Increase the score of the right player and reset the ball
+        score2++;
+        resetBall();
+      }
+    } else if (ballX + BALL_RADIUS > canvas.width - PADDLE_WIDTH) {
+      // The ball is near the right paddle
+      if (ballY > paddle2Y && ballY < paddle2Y + PADDLE_HEIGHT) {
+        // The ball hits the right paddle
+        // Reverse the x velocity and increase the speed
+        ballVX = -ballVX * 1.1;
+        ballVY = ballVY * 1.1;
+      } else {
+        // The ball misses the right paddle
+        // Increase the score of the left player and reset the ball
+        score1++;
+        resetBall();
+      }
+    }
+  }
+
+  function resetBall() {
+    // Reset the ball position and velocity
+    ballX = canvas.width / 2;
+    ballY = canvas.height / 2;
+    ballVX = BALL_SPEED;
+    ballVY = BALL_SPEED;
+
+    // Check for game over
+    if (score1 == SCORE_LIMIT || score2 == SCORE_LIMIT) {
+      // Set the game over flag to true
+      gameOver = true;
+    }
+  }
+
+  function updatePaddles() {
+    // Update the paddles position
+    // The left paddle is controlled by the user with the up and down arrow keys
+    if (keys[38]) {
+      // The up arrow key is pressed
+      // Move the paddle up
+      paddle1Y -= PADDLE_SPEED;
+    } else if (keys[40]) {
+      // The down arrow key is pressed
+      // Move the paddle down
+      paddle1Y += PADDLE_SPEED;
+    }
+
+    // The right paddle is controlled by the AI
+    // The AI tries to follow the ball with some randomness
+    if (ballY < paddle2Y + PADDLE_HEIGHT / 2 - Math.random() * 10) {
+      // The ball is above the paddle
+      // Move the paddle up with some difficulty
+      paddle2Y -= PADDLE_SPEED * AI_DIFFICULTY;
+    } else if (ballY > paddle2Y + PADDLE_HEIGHT / 2 + Math.random() * 10) {
+      // The ball is below the paddle
+      // Move the paddle down with some difficulty
+      paddle2Y += PADDLE_SPEED * AI_DIFFICULTY;
+    }
+
+    // Constrain the paddles within the canvas
+    paddle1Y = Math.max(0, Math.min(canvas.height - PADDLE_HEIGHT, paddle1Y));
+    paddle2Y = Math.max(0, Math.min(canvas.height - PADDLE_HEIGHT, paddle2Y));
+  }
+
+  function updateScore() {
+    // Update the score display
+    document.querySelector(".score").textContent = score1 + " : " + score2;
+  }
+
+  function draw() {
+    // Clear the canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Draw the ball and the paddles
+    drawBall();
+    drawPaddles();
+  }
+
+  function update() {
+    // Update the game logic
+    if (!gameOver) {
+      // The game is not over
+      updateBall();
+      updatePaddles();
+      updateScore();
+    } else {
+      // The game is over
+      // Display a message
+      ctx.fillStyle = "white";
+      ctx.font = "48px Arial";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      if (score1 == SCORE_LIMIT) {
+        // The left player wins
+        ctx.fillText("You win!", canvas.width / 2, canvas.height / 2);
+      } else {
+        // The right player wins
+        ctx.fillText("You lose!", canvas.width / 2, canvas.height / 2);
+      }
+    }
+  }
+
+  // Define an object to store the pressed keys
+  var keys = {};
+
+  // Add event listeners for the keydown and keyup events
+  window.addEventListener("keydown", function(e) {
+    // Set the key to true
+    keys[e.keyCode] = true;
+  });
+
+  window.addEventListener("keyup", function(e) {
+    // Set the key to false
+    keys[e.keyCode] = false;
+  });
+
+  // Call the draw function every 16 milliseconds
+  setInterval(draw, 16);
+
+  // Call the update function every 16 milliseconds
+  setInterval(update, 16);
+  </script>
+  </body>
+  </html>
